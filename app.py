@@ -19,7 +19,9 @@ llm = ChatGoogleGenerativeAI(
 @cl.on_chat_start
 async def start():
     """Initialize chat session"""
-    # Initialize conversation memory
+    # Clear previous session data
+    vector_manager.clear_vector_store()
+    
     memory = ConversationBufferMemory(
         memory_key="chat_history",
         return_messages=True,
@@ -28,52 +30,49 @@ async def start():
     
     cl.user_session.set("memory", memory)
     
-    # Welcome message
-    welcome_msg = """# ⚖️ Legal AI Assistant - Indian Law Expert
+    welcome_msg = """# 📚 Research Paper AI Assistant
 
-Welcome! I'm your AI Legal Assistant specializing in Indian Law and the Indian Penal Code (IPC).
+Welcome! I'm your AI Research Assistant for analyzing academic papers and white papers.
 
 **How I can help:**
-- Answer questions about Indian laws, IPC sections, and legal provisions
-- Analyze uploaded legal documents (PDF format)
-- Provide legal information and context
-- Search through your uploaded documents
+- Extract key information from research papers automatically
+- Answer questions about uploaded papers
+- Analyze methodologies, findings, and conclusions
+- Compare insights across multiple papers
 
 **Getting Started:**
-1. **Upload Documents**: Click the attachment icon to upload legal PDFs
-2. **Ask Questions**: Type your legal queries directly
+1. **Upload Papers**: Click the attachment icon to upload research PDFs
+2. **Auto-Analysis**: I'll automatically extract key information from each paper
+3. **Ask Questions**: Query about the papers, findings, methodologies, or concepts
 
-**Important Disclaimer:**
-⚠️ I provide legal information, not legal advice. Always consult a qualified lawyer for specific legal matters.
-
-How can I assist you today?"""
+Ready to analyze your research papers!"""
     
     await cl.Message(content=welcome_msg).send()
+
+@cl.on_chat_end
+async def end():
+    """Clean up when chat session ends"""
+    # Clear vector store and memory
+    vector_manager.clear_vector_store()
+    await cl.Message(content="🧹 Session data cleared. Thanks for using Research Paper AI Assistant!").send()
 
 @cl.on_message
 async def main(message: cl.Message):
     """Handle incoming messages"""
     memory = cl.user_session.get("memory")
     
-    # Check for file uploads
     if message.elements:
         await handle_file_upload(message.elements)
         return
     
-    # Process query
     query = message.content
-    
-    # Send thinking message
     msg = cl.Message(content="")
     await msg.send()
     
     try:
-        # Check if we have documents in vector store
         if vector_manager.has_documents():
-            # Use RAG approach with documents
             response = await query_with_documents(query, memory)
         else:
-            # Direct query to Gemini
             response = await query_without_documents(query, memory)
         
         msg.content = response
@@ -85,8 +84,8 @@ async def main(message: cl.Message):
         await msg.update()
 
 async def handle_file_upload(elements):
-    """Handle PDF file uploads"""
-    processing_msg = cl.Message(content="📄 Processing your document(s)...")
+    """Handle PDF file uploads and extract key information"""
+    processing_msg = cl.Message(content="📄 Processing your research paper(s)...")
     await processing_msg.send()
     
     processed_files = []
@@ -95,18 +94,27 @@ async def handle_file_upload(elements):
     for element in elements:
         if element.mime == "application/pdf":
             try:
-                # Process PDF
-                documents = vector_manager.process_pdf(element.path)
+                # Process PDF and get full text
+                documents, full_text = vector_manager.process_pdf(element.path, element.name)
                 vector_manager.add_documents(documents)
+                
+                # Extract key information from the paper
+                extraction_msg = cl.Message(content=f"🔍 Analyzing **{element.name}**...")
+                await extraction_msg.send()
+                
+                key_info = await extract_paper_info(full_text[:8000])  # Use first 8000 chars for extraction
+                
+                # Update message with extracted info
+                extraction_msg.content = f"## 📄 {element.name}\n\n{key_info}"
+                await extraction_msg.update()
+                
                 processed_files.append(element.name)
             except Exception as e:
                 errors.append(f"{element.name}: {str(e)}")
     
-    # Send result message
+    # Send completion message
     if processed_files:
-        success_msg = f"✅ Successfully processed {len(processed_files)} document(s):\n"
-        success_msg += "\n".join([f"- {name}" for name in processed_files])
-        success_msg += "\n\nYou can now ask questions about these documents!"
+        success_msg = f"\n✅ Successfully processed {len(processed_files)} paper(s). You can now ask questions about them!"
         await cl.Message(content=success_msg).send()
     
     if errors:
@@ -114,16 +122,29 @@ async def handle_file_upload(elements):
         error_msg += "\n".join([f"- {err}" for err in errors])
         await cl.Message(content=error_msg).send()
 
+async def extract_paper_info(text: str) -> str:
+    """Extract key information from research paper"""
+    try:
+        prompt = prompts.PAPER_EXTRACTION_PROMPT.format(content=text)
+        response = await llm.ainvoke(prompt)
+        return response.content
+    except Exception as e:
+        return f"Could not extract information: {str(e)}"
+
 async def query_with_documents(query: str, memory):
-    """Query using RAG with uploaded documents"""
+    """Query using RAG with uploaded research papers"""
     # Get relevant documents
     relevant_docs = vector_manager.similarity_search(query, k=4)
     
-    # Build context from documents
-    context = "\n\n".join([doc.page_content for doc in relevant_docs])
+    # Build context from documents with source info
+    context_parts = []
+    for doc in relevant_docs:
+        source = doc.metadata.get("source", "Unknown")
+        context_parts.append(f"[From: {source}]\n{doc.page_content}")
+    context = "\n\n".join(context_parts)
     
     # Build prompt
-    prompt = prompts.LEGAL_SYSTEM_PROMPT + "\n\n" + prompts.DOCUMENT_QUERY_PROMPT.format(
+    prompt = prompts.RESEARCH_SYSTEM_PROMPT + "\n\n" + prompts.DOCUMENT_QUERY_PROMPT.format(
         context=context,
         question=query
     )
@@ -147,7 +168,7 @@ async def query_with_documents(query: str, memory):
 async def query_without_documents(query: str, memory):
     """Query directly without documents"""
     # Build prompt
-    prompt = prompts.LEGAL_SYSTEM_PROMPT + "\n\n" + prompts.GENERAL_QUERY_PROMPT.format(
+    prompt = prompts.RESEARCH_SYSTEM_PROMPT + "\n\n" + prompts.GENERAL_QUERY_PROMPT.format(
         question=query
     )
     

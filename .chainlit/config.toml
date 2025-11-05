@@ -35,7 +35,7 @@ spontaneous_file_upload = true
 
 [UI]
 # Name of the app and chatbot.
-name = "Legal AI Assistant"
+name = "Research Paper AI Assistant"
 
 # Show the readme while the thread is empty.
 show_readme_as_default = false

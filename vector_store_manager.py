@@ -35,12 +35,12 @@ class VectorStoreManager:
             os.makedirs(config.VECTOR_STORE_PATH, exist_ok=True)
             self.vector_store.save_local(config.VECTOR_STORE_PATH)
     
-    def process_pdf(self, file_path: str) -> List[Document]:
-        """Extract text from PDF and create documents"""
+    def process_pdf(self, file_path: str, file_name: str = None) -> tuple[List[Document], str]:
+        """Extract text from PDF and create documents. Returns (documents, full_text)"""
         reader = PdfReader(file_path)
         text = ""
         for page in reader.pages:
-            text += page.extract_text()
+            text += page.extract_text() + "\n"
         
         text_splitter = RecursiveCharacterTextSplitter(
             chunk_size=config.CHUNK_SIZE,
@@ -49,8 +49,9 @@ class VectorStoreManager:
         )
         
         chunks = text_splitter.split_text(text)
-        documents = [Document(page_content=chunk, metadata={"source": file_path}) for chunk in chunks]
-        return documents
+        metadata = {"source": file_name or file_path}
+        documents = [Document(page_content=chunk, metadata=metadata) for chunk in chunks]
+        return documents, text
     
     def add_documents(self, documents: List[Document]):
         """Add documents to vector store"""
@@ -69,3 +70,14 @@ class VectorStoreManager:
     def has_documents(self) -> bool:
         """Check if vector store has documents"""
         return self.vector_store is not None
+    
+    def clear_vector_store(self):
+        """Clear vector store from memory and disk"""
+        self.vector_store = None
+        if os.path.exists(config.VECTOR_STORE_PATH):
+            import shutil
+            try:
+                shutil.rmtree(config.VECTOR_STORE_PATH)
+                print("Vector store cleared successfully")
+            except Exception as e:
+                print(f"Error clearing vector store: {e}")

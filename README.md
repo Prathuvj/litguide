@@ -1,14 +1,15 @@
-# ⚖️ Legal AI Assistant - Indian Law Expert
+# 📚 Research Paper AI Assistant
 
-An AI-powered legal assistant application specializing in Indian Law and the Indian Penal Code (IPC). Built with Chainlit, Gemini AI, FAISS, and LangChain.
+An AI-powered research assistant for analyzing academic papers and white papers. Built with Chainlit, Gemini AI, FAISS, and LangChain.
 
 ## Features
 
-- **Document Upload & Analysis**: Upload legal PDFs and ask questions about them
-- **Indian Law Expertise**: Direct chat about IPC sections, acts, and legal provisions
-- **Vector-Based Search**: FAISS-powered similarity search for relevant document sections
+- **Automatic Information Extraction**: Upload papers and get key information extracted automatically
+- **Document Upload & Analysis**: Upload research PDFs (single or multiple)
+- **Intelligent Q&A**: Ask questions about methodologies, findings, and conclusions
+- **Vector-Based Search**: FAISS-powered similarity search for relevant paper sections
 - **Conversation Memory**: Maintains context throughout the conversation
-- **Real-Time Responses**: Powered by Google's Gemini AI
+- **Real-Time Responses**: Powered by Google's Gemini 2.5 Flash
 - **Clean UI**: Intuitive Chainlit interface
 
 ## Tech Stack
@@ -51,9 +52,10 @@ chainlit run app.py -w
    - Open your browser to `http://localhost:8000`
 
 3. **Use the assistant**:
-   - **Upload Documents**: Click the attachment icon to upload legal PDFs
-   - **Ask Questions**: Type your queries about Indian law or uploaded documents
-   - **Get Answers**: Receive detailed responses with legal citations
+   - **Upload Papers**: Click the attachment icon to upload research PDFs
+   - **Auto-Analysis**: Key information is automatically extracted and displayed
+   - **Ask Questions**: Query about methodologies, findings, or concepts
+   - **Get Answers**: Receive detailed responses with citations from the papers
 
 ## Project Structure
 
@@ -61,7 +63,7 @@ chainlit run app.py -w
 .
 ├── app.py                      # Main Chainlit application
 ├── config.py                   # Configuration settings
-├── prompts.py                  # Legal prompt templates
+├── prompts.py                  # AI prompt templates
 ├── vector_store_manager.py     # FAISS vector store management
 ├── requirements.txt            # Python dependencies
 ├── .env.example               # Environment variables template
@@ -78,19 +80,15 @@ Edit `config.py` to customize:
 - Vector store location
 - Temperature and token limits
 
-## Important Disclaimer
-
-⚠️ This application provides legal information, not legal advice. Always consult a qualified lawyer for specific legal matters.
-
 ## Guidelines
 
 The AI assistant follows strict guidelines:
-1. Provides accurate information based on Indian legal framework
-2. Cites relevant IPC sections and legal provisions
-3. Distinguishes between general guidance and specific legal advice
-4. Recommends consulting qualified lawyers for specific cases
-5. Maintains professional and formal tone
-6. Acknowledges limitations when uncertain
+1. Provides accurate information based on research papers
+2. Cites relevant papers, sections, and findings
+3. Explains complex concepts clearly and concisely
+4. Maintains academic and professional tone
+5. Acknowledges limitations when uncertain
+6. Focuses on factual, objective information from research
 
 ## License
 
